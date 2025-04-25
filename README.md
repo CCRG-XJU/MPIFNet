@@ -1,2 +1,2 @@
-# MPIFNet The code is being organized
+# MPIFNet code is being organized
 
