@@ -1,9 +1,6 @@
-
-
 import math
 from functools import partial
 from typing import  Callable
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -11,18 +8,14 @@ import torch.utils.checkpoint as checkpoint
 from einops import repeat
 from timm.models.layers import DropPath,trunc_normal_
 from timm.models.registry import register_model
-
 try:
     from mamba_ssm.ops.selective_scan_interface import selective_scan_fn, selective_scan_ref
 except:
     pass
-
 try:
     from selective_scan import selective_scan_fn as selective_scan_fn_v1
 except:
     pass
-
-
 
 class SS2D(nn.Module):
     def __init__(
@@ -46,16 +39,13 @@ class SS2D(nn.Module):
     ):
        
         factory_kwargs = {"device": device, "dtype": dtype}
-
         super().__init__()
-
         self.d_model = d_model
         self.d_state = d_state
         # self.d_state = math.ceil(self.d_model / 6) if d_state == "auto" else d_model # 20240109
         self.d_conv = d_conv
         self.expand = expand
 
-  
         self.d_inner = int(self.expand * self.d_model)
         self.dt_rank = math.ceil(self.d_model / 16) if dt_rank == "auto" else dt_rank
 
@@ -72,7 +62,6 @@ class SS2D(nn.Module):
         )
         self.act = nn.SiLU()
 
-       
         self.x_proj = (
             nn.Linear(self.d_inner, (self.dt_rank + self.d_state * 2), bias=False, **factory_kwargs), 
             nn.Linear(self.d_inner, (self.dt_rank + self.d_state * 2), bias=False, **factory_kwargs), 
@@ -83,7 +72,6 @@ class SS2D(nn.Module):
         self.x_proj_weight = nn.Parameter(torch.stack([t.weight for t in self.x_proj], dim=0)) # (K=4, N, inner)
         del self.x_proj
 
-  
         self.dt_projs = (
             self.dt_init(self.dt_rank, self.d_inner, dt_scale, dt_init, dt_min, dt_max, dt_init_floor, **factory_kwargs),
             self.dt_init(self.dt_rank, self.d_inner, dt_scale, dt_init, dt_min, dt_max, dt_init_floor, **factory_kwargs),
@@ -343,13 +331,11 @@ class VSSLayer_up(nn.Module):
 
 
     def forward(self, x):
-
         for blk in self.blocks:
             if self.use_checkpoint:
                 x = checkpoint.checkpoint(blk, x)
             else:
                 x = blk(x) 
-      
         return x
     
 
@@ -383,10 +369,8 @@ class Block(nn.Module):
         if self.gamma is not None:
             x = self.gamma * x
         x = x.permute(0, 3, 1, 2) # (N, H, W, C) -> (N, C, H, W)
-
         x = input + self.drop_path(x)
         return x
-
 
 class LayerNorm(nn.Module):
     r""" LayerNorm that supports two data formats: channels_last (default) or channels_first. 
@@ -511,12 +495,11 @@ class conv_block(nn.Module):
         x = self.conv(x)
         return x
 
-# 编码器
+
 class ConvNeXt(nn.Module):
     r""" ConvNeXt
         A PyTorch impl of : `A ConvNet for the 2020s`  -
           https://arxiv.org/pdf/2201.03545.pdf
-
     Args:
         in_chans (int): Number of input image channels. Default: 3
         num_classes (int): Number of classes for classification head. Default: 1000
@@ -582,7 +565,6 @@ class ConvNeXt(nn.Module):
         return x
 
 
-# 全局局部mamba
 class GLmamba(nn.Module):
 
     def __init__(self,dim):
@@ -593,7 +575,6 @@ class GLmamba(nn.Module):
         self.SelfAttention = SelfAttention(dim)
 
     def forward(self, x):
-
         B, C, H, W = x.shape
         gmamba = self.mamba(x)
         mid_height = H // 2
@@ -609,18 +590,15 @@ class GLmamba(nn.Module):
         lower_left = self.mamba(lower_left)
         lower_right = self.mamba(lower_right)
 
-        # W cat
         upper_half = torch.cat((upper_left, upper_right), dim=3)
         lower_half = torch.cat((lower_left, lower_right), dim=3)
 
         lmamba = torch.cat((upper_half, lower_half), dim=2)
-
+	    
         glmamba = lmamba + gmamba
         out = self.SelfAttention(x,lmamba,gmamba) + glmamba 
-  
         return out
 
-#注意力
 class SelfAttention(nn.Module):
     def __init__(self, dim):
         super(SelfAttention, self).__init__()
@@ -653,7 +631,6 @@ class SelfAttention(nn.Module):
             output[:, start:end] = out_chunk   # torch.Size([8, 4096, 384])
     
         out = output.view(B, C, H, W)  
-
         return out
 
 from pytorch_wavelets import DWTForward
@@ -672,7 +649,6 @@ class skip(nn.Module):
             nn.ReLU(inplace=True),
             )
        
-        
     def forward(self, x1,x2):
 
         x1 = self.conv(x1)  #torch.Size([8, 384, 32, 32])
