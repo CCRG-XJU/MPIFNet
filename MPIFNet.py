@@ -596,7 +596,7 @@ class GLmamba(nn.Module):
         lmamba = torch.cat((upper_half, lower_half), dim=2)
 	    
         glmamba = lmamba + gmamba
-        out = self.SelfAttention(x,lmamba,gmamba) + glmamba 
+        out = self.SelfAttention(lmamba,gmamba,x) + glmamba
         return out
 
 class SelfAttention(nn.Module):
