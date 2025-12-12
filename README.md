@@ -56,7 +56,7 @@ python MPIFNet/test_loveda.py -c SFCVPNet/config/loveda/mpifnet.py -o ~/fig_resu
 
 ## Acknowledgement
 
-Many thanks the following projects's contributions to **SFCVPNet**.
+Many thanks the following projects's contributions to **MPIFNet**.
 - [GeoSeg](https://github.com/WangLibo1995/GeoSeg)
 - [pytorch lightning](https://www.pytorchlightning.ai/)
 - [timm](https://github.com/rwightman/pytorch-image-models)
